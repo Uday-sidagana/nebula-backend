@@ -267,31 +267,31 @@ class FormEncoder(json.JSONEncoder):
         return super().default(obj)
 
 def extract_images(response_text, form):
-    # Create a BeautifulSoup object from the response content
-    soup = BeautifulSoup(response_text.text, "html.parser")
+    # Use BeautifulSoup to parse the HTML content
+    soup = BeautifulSoup(response_text.text, 'html.parser')
 
     for w in form.Fields:
         if w.TypeID == FieldType.FieldImage:
-            img_el = soup.find("[data-item-id='" + str(w.ID) + "'] img")
-            if img_el:
-                src = img_el.get("src")
-                if src:
-                    w.Widgets[0]["src"] = src
-                else:
-                    w.Widgets[0]["src"] = ""
+            # Use a regular expression to find the img element
+            pattern = f'<div[^>]*data-item-id="{w.ID}"[^>]*>.*?<img[^>]*src="([^"]+)"'
+            img_match = re.search(pattern, str(soup))
+
+            if img_match:
+                src = img_match.group(1)
+                w.Widgets[0]["src"] = src
             else:
                 w.Widgets[0]["src"] = ""
         elif w.TypeID == FieldType.FieldVideo:
-            iframe_el = soup.find("[data-item-id='" + str(w.ID) + "'] iframe")
-            if iframe_el:
-                src = iframe_el.get("src")
-                if src:
-                    w.Widgets[0]["src"] = src
-                else:
-                    w.Widgets[0]["src"] = ""
-            else:
+            # Use a regular expression to find the iframe element
+            pattern = f'<div[^>]*data-item-id="{w.ID}"[^>]*>.*?<iframe[^>]*src="([^"]+)"'
+            iframe_match = re.search(pattern, str(soup))
+
+            if iframe_match:
+                src = iframe_match.group(1)
+                w.Widgets[0]["src"] = src
+            else:   
                 w.Widgets[0]["src"] = ""
- 
+
 def form_extract(response_text):
     # Create a BeautifulSoup object from the response content
     soup = BeautifulSoup(response_text.text, "html.parser")
