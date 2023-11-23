@@ -390,7 +390,7 @@ def fetch_and_exit(url):
     sys.exit(0)
 
 
-@app.route('/', methods=['GET'])
+@ app.route('/', methods=['GET'])
 def form_dress_handler():
 
     response_headers = {
