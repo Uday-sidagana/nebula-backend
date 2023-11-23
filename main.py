@@ -11,6 +11,7 @@ from flask import Flask, request, Response
 
 app = Flask(__name__)
 
+
 class FieldType(Enum):
     FieldShort = 0
     FieldParagraph = 1
@@ -27,11 +28,14 @@ class FieldType(Enum):
     FieldVideo = 12
     FieldUpload = 13
 
+
 class Widget(dict):
     pass
 
+
 class Option(dict):
     pass
+
 
 class Field:
     def __init__(self, ID, Label, Desc, TypeID, Widgets):
@@ -41,8 +45,10 @@ class Field:
         self.TypeID = TypeID
         self.Widgets = Widgets
 
+
 class Fields(list):
     pass
+
 
 class Form:
     def __init__(self):
@@ -56,6 +62,7 @@ class Form:
         self.AskEmail = False
         self.Fields = Fields()
 
+
 def to_int(i):
     if isinstance(i, int):
         return i
@@ -68,6 +75,7 @@ def to_int(i):
 
     return 0
 
+
 def to_string(i):
     if isinstance(i, (int, float)):
         return str(i)
@@ -76,6 +84,7 @@ def to_string(i):
         return i
 
     return ""
+
 
 def to_bool(i):
     if isinstance(i, bool):
@@ -89,11 +98,13 @@ def to_bool(i):
 
     return False
 
+
 def to_slice(i):
     if isinstance(i, list):
         return i
 
     return None
+
 
 def NewFieldFromData(data):
     f = Field(
@@ -107,7 +118,8 @@ def NewFieldFromData(data):
     if f.TypeID == FieldType.FieldShort or f.TypeID == FieldType.FieldParagraph:
         widgets = to_slice(data[4])
         widget = to_slice(widgets[0])
-        f.Widgets = [Widget(ID=to_string(widget[0]), required=to_bool(widget[2]))]
+        f.Widgets = [Widget(ID=to_string(widget[0]),
+                            required=to_bool(widget[2]))]
 
     elif f.TypeID in [FieldType.FieldChoices, FieldType.FieldCheckboxes, FieldType.FieldDropdown]:
         widgets = to_slice(data[4])
@@ -240,12 +252,14 @@ def NewFieldFromData(data):
 
     return f
 
+
 def NewFieldsFromData(data):
     fields = Fields()
     for d in data:
         field = NewFieldFromData(to_slice(d))
         fields.append(field)
     return fields
+
 
 class FormEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -261,10 +275,11 @@ class FormEncoder(json.JSONEncoder):
                 "SectionCount": obj.SectionCount,
                 "AskEmail": obj.AskEmail,
                 "Fields": [field.__dict__ for field in obj.Fields],
-            } 
+            }
         elif isinstance(obj, FieldType):
             return obj.value  # Serialize FieldType as its integer value
         return super().default(obj)
+
 
 def extract_images(response_text, form):
     # Use BeautifulSoup to parse the HTML content
@@ -289,8 +304,9 @@ def extract_images(response_text, form):
             if iframe_match:
                 src = iframe_match.group(1)
                 w.Widgets[0]["src"] = src
-            else:   
+            else:
                 w.Widgets[0]["src"] = ""
+
 
 def form_extract(response_text):
     # Create a BeautifulSoup object from the response content
@@ -313,7 +329,8 @@ def form_extract(response_text):
     fbzx = fbzx_input.get("value", "")
 
     script_text = script.string
-    script_text = script_text.replace("var FB_PUBLIC_LOAD_DATA_ =", "").strip(";").strip()
+    script_text = script_text.replace(
+        "var FB_PUBLIC_LOAD_DATA_ =", "").strip(";").strip()
     form_data = json.loads(script_text)
 
     form = Form()
@@ -334,7 +351,7 @@ def form_extract(response_text):
     other_extra_data = to_slice(extra_data[10])
     if other_extra_data and len(other_extra_data) > 4:
         form.AskEmail = to_int(other_extra_data[4]) == 1
-    
+
     form.Fbzx = fbzx
 
     extract_images(response_text, form)
@@ -342,8 +359,11 @@ def form_extract(response_text):
     return form
 
 # Define the custom exception for InvalidForm
+
+
 class InvalidForm(Exception):
     pass
+
 
 def check_url(url):
     parsed_url = urllib.parse.urlparse(url)
@@ -356,19 +376,21 @@ def check_url(url):
 
     return None
 
+
 def fetch_and_exit(url):
     try:
         response = requests.get(url)
         response.raise_for_status()
         form_data = form_extract(response)
-        form_data_nal = json.dumps(form_data, cls=FormEncoder)  # Serialize using the custom encoder
+        # Serialize using the custom encoder
+        form_data_nal = json.dumps(form_data, cls=FormEncoder)
         print(form_data_nal)
     except requests.exceptions.RequestException as e:
         logging.error(str(e))
     sys.exit(0)
 
-@app.route('/', methods=['GET'])
 
+@app.route('/', methods=['GET'])
 def form_dress_handler():
 
     response_headers = {
@@ -387,13 +409,15 @@ def form_dress_handler():
         response = requests.get(form_url)
         response.raise_for_status()
         form_data = form_extract(response)
-        form_data_nal = json.dumps(form_data, cls=FormEncoder)  # Serialize using the custom encoder
+        # Serialize using the custom encoder
+        form_data_nal = json.dumps(form_data, cls=FormEncoder)
 
         return Response((form_data_nal), status=200, headers=response_headers)
 
     except requests.exceptions.RequestException as e:
         response_data = {'Error': str(e)}
         return Response(json.dumps(response_data), status=500, headers=response_headers)
+
 
 if __name__ == '__main__':
     addr = '0.0.0.0'
@@ -409,9 +433,11 @@ if __name__ == '__main__':
         print(f"Serving on {addr}:{port}")
         app.run(host=addr, port=port)
 
+
 def shutdown_server(signum, frame):
     print("Shutting down...")
     sys.exit(0)
+
 
 signal.signal(signal.SIGINT, shutdown_server)
 signal.signal(signal.SIGTERM, shutdown_server)
