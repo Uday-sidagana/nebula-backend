@@ -21,7 +21,7 @@ class FieldType(Enum):
     FieldParagraph = 1
     FieldChoices = 2
     FieldDropdown = 3
-    FieldCheckboxes = 4
+    FieldCheckboxes = 5
     FieldLinear = 5
     FieldTitle = 6
     FieldGrid = 7
