@@ -5,11 +5,35 @@ import signal
 import sys
 import urllib.parse
 import requests
+import mysql.connector
+from mysql.connector import errorcode
+import time
+
 from enum import Enum
 from bs4 import BeautifulSoup
 from flask import Flask, request, Response
 
 app = Flask(__name__)
+db_config = {
+    'user': 'root@localhost',
+    'password': 'KK10293847kk!',
+    'host': 'Uday',
+    'database': 'nebula',
+    'raise_on_warnings': True,
+}
+
+try:
+    cnx = mysql.connector.connect(**db_config)
+    cursor = cnx.cursor()
+except mysql.connector.Error as err:
+    if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+        print("Error: Access denied. Please check your credentials.")
+    elif err.errno == errorcode.ER_BAD_DB_ERROR:
+        print("Error: The specified database does not exist.")
+    else:
+        print(f"Error: {err}")
+    sys.exit(1)
+
 
 
 class FieldType(Enum):
@@ -390,7 +414,7 @@ def fetch_and_exit(url):
     sys.exit(0)
 
 
-@app.route('/', methods=['GET'])
+@ app.route('/', methods=['GET'])
 def form_dress_handler():
 
     response_headers = {
@@ -411,6 +435,17 @@ def form_dress_handler():
         form_data = form_extract(response)
         # Serialize using the custom encoder
         form_data_nal = json.dumps(form_data, cls=FormEncoder)
+        current_time = int(time.time())
+
+        # Store the timestamp and form URL in the database
+        try:
+            cursor.execute("INSERT INTO user_requests (timestamp, url) VALUES (%s, %s)", (current_time, form_url))
+            cnx.commit()
+        except mysql.connector.Error as err:
+            print(f"Error storing user request in the database: {err}")
+
+        return Response((form_data_nal), status=200, headers=response_headers)
+
 
         return Response((form_data_nal), status=200, headers=response_headers)
 

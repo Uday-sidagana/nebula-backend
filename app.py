@@ -7,7 +7,7 @@ import urllib.parse
 import requests
 import mysql.connector
 from mysql.connector import errorcode
-import time
+
 
 from enum import Enum
 from bs4 import BeautifulSoup
