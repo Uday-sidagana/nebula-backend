@@ -13,6 +13,20 @@ import time
 from enum import Enum
 from bs4 import BeautifulSoup
 from flask import Flask, request, Response
+from flask import Flask, request, Response, g
+from flask.cli import with_appcontext
+
+# sql
+mysql_config = {
+    'user': 'root',
+    'password': 'KK10293847kk!',
+    'host': 'fe80::c9ec:878b:6e6:8c2b%12',
+    'database': 'neb',
+}
+
+mysql_conn = mysql.connector.connect(**mysql_config)
+mysql_cursor = mysql_conn.cursor()
+
 
 app = Flask(__name__)
 
@@ -417,14 +431,40 @@ def form_dress_handler():
         # Serialize using the custom encoder
         form_data_nal = json.dumps(form_data, cls=FormEncoder)
 
-        return Response((form_data_nal), status=200, headers=response_headers)
+        # Send the response to the client
+        response_obj = Response(
+            (form_data_nal), status=200, headers=response_headers)
+
+        # Log the timestamp and URL after sending the response
+        log_time_and_url(form_url)
+
+        return response_obj
 
     except requests.exceptions.RequestException as e:
         response_data = {'Error': str(e)}
         return Response(json.dumps(response_data), status=500, headers=response_headers)
 
 
-if __name__ == '__main__':
+def log_time_and_url(url):
+    try:
+        current_time = time.strftime('%Y-%m-%d %H:%M:%S')
+        insert_query = "INSERT INTO log_table (timestamp, url) VALUES (%s, %s)"
+        values = (current_time, url)
+
+        g.mysql_cursor.execute(insert_query, values)
+        g.mysql_conn.commit()
+        print(
+            f"Record inserted successfully: Timestamp={current_time}, URL={url}")
+    except mysql.connector.Error as err:
+        print(f"MySQL Error: {err}")
+        raise
+    finally:
+        print("Closing MySQL cursor and connection.")
+
+# Use the with_appcontext decorator
+
+
+def run_flask_app():
     addr = '0.0.0.0'
     port = 8000
 
@@ -436,13 +476,29 @@ if __name__ == '__main__':
             print("Usage: python script.py -f <URL>")
     else:
         print(f"Serving on {addr}:{port}")
-        app.run(host=addr, port=port)
+
+    app.run(host=addr, port=port)
+
+    # The code here won't be executed until the Flask server is stopped.
+
+    # The following lines won't be executed immediately after app.run.
+    print("Before log_time_and_url call")
+    log_time_and_url("Test URL")
+    print("After log_time_and_url call")
 
 
 def shutdown_server(signum, frame):
     print("Shutting down...")
-    sys.exit(0)
 
 
 signal.signal(signal.SIGINT, shutdown_server)
 signal.signal(signal.SIGTERM, shutdown_server)
+
+
+if __name__ == '__main__':
+    addr = '0.0.0.0'
+    port = 8000
+
+    signal.signal(signal.SIGINT, shutdown_server)
+    signal.signal(signal.SIGTERM, shutdown_server)
+    run_flask_app()
